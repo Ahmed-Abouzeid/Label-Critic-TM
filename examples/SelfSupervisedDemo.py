@@ -7,9 +7,9 @@ from tmu.tsetlin_machine import TMSSClassifier
 
 
 
-num_clauses_l = [8]
-T_l = [5]
-S_l = [20]
+num_clauses_l = [80]
+T_l = [50]
+S_l = [30]
 num_features = 200
 min_samples_per_sub_pattern = 100
 max_samples_per_sub_pattern = 100

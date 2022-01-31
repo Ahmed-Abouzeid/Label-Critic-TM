@@ -685,10 +685,7 @@ class TMSSClassifier(TMClassifier):
     def __init__(self, number_of_clauses, T, s, platform='CPU', patch_dim=None, boost_true_positive_feedback=1,
                  number_of_state_bits=8, weighted_clauses=False, clause_drop_p=0.0, literal_drop_p=0.0,
                  pattern_search_exit=0.8, epsilon = 0.5, reset_guess_threshold = 500):
-        super().__init__(number_of_clauses, T, s, platform=platform, patch_dim=patch_dim,
-                         boost_true_positive_feedback=boost_true_positive_feedback,
-                         number_of_state_bits=number_of_state_bits, weighted_clauses=weighted_clauses,
-                         clause_drop_p=clause_drop_p, literal_drop_p=literal_drop_p)
+        
         self.pattern_search_exit = pattern_search_exit
         self.epsilon = epsilon
         self.reset_guess_threshold = reset_guess_threshold
@@ -697,8 +694,24 @@ class TMSSClassifier(TMClassifier):
         self.g_non = []
         self.grouped_samples = {}
         self.interpretability_clauses = {}
+        
+        self.number_of_clauses = number_of_clauses
+        self.T = T
+        self.s = s
+        self.platform = platform
+        self.patch_dim = patch_dim
+        self.number_of_state_bits = number_of_state_bits
+        self.weighted_clauses = weighted_clauses
+        self.clause_drop_p = clause_drop_p
+        self.literal_drop_p = literal_drop_p
+        self.boost_true_positive_feedback = boost_true_positive_feedback
 
-    def initialize(self, X, Y):
+    def initialize_coreTM(self, X, Y):
+        '''this method reintialize the core parent: TM multi classifer each time we conduct a binary classification on the data during the recursion '''
+        super().__init__(self.number_of_clauses, self.T, self.s, platform=self.platform, patch_dim=self.patch_dim,
+                         boost_true_positive_feedback=self.boost_true_positive_feedback,
+                         number_of_state_bits=self.number_of_state_bits, weighted_clauses=self.weighted_clauses,
+                         clause_drop_p=self.clause_drop_p, literal_drop_p=self.literal_drop_p)
         super().initialize(X, Y)
 
     def check_permutated_gt(self, preds, Y_test_permutated):
@@ -1088,6 +1101,7 @@ class TMSSClassifier(TMClassifier):
         
         for X in all_X:
             las, Y = self.guess_labels(len(X))
+            self.initialize_coreTM(X, Y)
             final_pattern_A, final_pattern_B = [], []
             signal = 0
             counter = 0
