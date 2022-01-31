@@ -680,7 +680,7 @@ class TMRegressor(TMBasis):
 
 class TMSSClassifier(TMClassifier):
     '''The class is responsible to learn multiclasses while their ground truthes are absent. The mechanism is keep dividing the data into two groups (binary classification) using the original TM
-    where that is done recursivly untill we break the data into smaller classes till no further separation needed. For example 20 classes dataset will be consider two classes, each class associated data samples will be broken into another two and so on until the data being examined is only distribnuted in either self.g_A, or self.g_B means there is no needed separation.'''
+    where that is done recursivly untill we break the data into smaller classes till no further separation needed. For example 20 classes dataset will be consider two classes, each class associated data samples will be broken into another two and so on until the data being examined is only distributed in either self.g_A, or self.g_B means there is no needed separation. The too many classes represent separating unique subpatterns in the data. later on, some of these separated classes (subpatterns) can be coupled again using the associated clauses to construct the final classes in the data in cases some classes are sharing more than one of these subpatterns'''
     
     def __init__(self, number_of_clauses, T, s, platform='CPU', patch_dim=None, boost_true_positive_feedback=1,
                  number_of_state_bits=8, weighted_clauses=False, clause_drop_p=0.0, literal_drop_p=0.0,
@@ -714,7 +714,7 @@ class TMSSClassifier(TMClassifier):
         return accuracy
 
     def remove_contradiction_0(self, class_clauses_dict):
-        '''ensures that a class pos or neg clause has no contradicted literals. for example: x1 and not x1 in the same aggregated class clause either pos or neg it was'''
+        '''ensures that a class pos or neg clause has no contradicted literals. for example: x1 and not x1 in the same aggregated class clause either pos or neg.'''
 
         all_literals = [l for c in class_clauses_dict.values() for l in c]
         processed = []
@@ -749,7 +749,7 @@ class TMSSClassifier(TMClassifier):
         return self.generate_logic(literals)
 
     def generate_logic(self, literals):
-        '''the generate logoc function returns a clause with the ∧ operator so other functions can use the clauses further with a proper expected format '''
+        '''the generate logoc helper function returns a clause with the ∧ operator so other functions can use the clauses further with a proper expected format '''
         final_clause = ""
         for e, l in enumerate(literals):
             if e != len(literals) - 1:
@@ -803,7 +803,7 @@ class TMSSClassifier(TMClassifier):
         return self.generate_logic(list_final_1), self.generate_logic(list_final_2)
 
     def convert_to_dict_clauses(self, str_clause):
-        '''convers a clause with the ∧ operator to a dictionary so other functions can process with the expected proper format'''
+        '''a helper function tha converts a clause with the ∧ operator to a dictionary so other functions can process with the expected proper format'''
         list_clause = str_clause.split(" ∧ ")
         return {0: list_clause}
 
@@ -897,7 +897,7 @@ class TMSSClassifier(TMClassifier):
             return 1
             
         else:
-            if random.random() <= self.epsilon:
+            if random.random() <= self.epsilon: # here we do not penalize all the LAS if they all were mistaken to avoid symetric error loops while labeling the data. It can be considered as sampling the labels.  
                 la.penalize()
                 return 0
             return 1
@@ -919,7 +919,7 @@ class TMSSClassifier(TMClassifier):
 
     def clean_learned_patterns(self, num_clauses, num_features):
         '''extracts all learned clauses and clean all contradictions by elimenating literals that conflicts with each others. for example: not x1 and x1 cannot found together
-        in pos clause of a class and pos clause of another class. x1 and x1 cannot be part of sample class both pos and neg clauses.'''
+        in pos clauses of a class or neg clauses of a class. x1 and x1 cannot be part of a class pos clause and at same time its neg clause.'''
 
         all_classes_patterns = []
         for x in range(2):
@@ -985,7 +985,7 @@ class TMSSClassifier(TMClassifier):
         return cleaned_classes_clauses
 
     def guess_labels(self, samples_num):
-        '''a function that initialize guess labels based on random selection of the associated LAs to data samnples'''
+        '''a function that initializes guess labels based on random selection of the associated LAs to data samnples'''
         las = []
         Y = np.zeros(samples_num)
     
@@ -1045,7 +1045,7 @@ class TMSSClassifier(TMClassifier):
                 
 
     def reset_grouping(self):
-        '''reset the groups A, B and non during the recursive training so each time we split data into two classes, we 
+        '''reset the groups g_A, g_B and g_non, during the recursive training so each time we split data into two classes, we 
         get an empty place holders for the potential groups which we will use to separate data into two classes'''
         
         self.g_A = []
