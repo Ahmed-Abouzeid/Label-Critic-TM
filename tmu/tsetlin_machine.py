@@ -112,7 +112,7 @@ class TMBasis():
 
 class TMClassifier(TMBasis):
     def __init__(self, number_of_clauses, T, s, platform='CPU', patch_dim=None, boost_true_positive_feedback=1,
-                 number_of_state_bits=8, weighted_clauses=False, clause_drop_p=0.0, literal_drop_p=0.0):
+                 number_of_state_bits=8, weighted_clauses=True, clause_drop_p=0.3, literal_drop_p=0.0):
         super().__init__(number_of_clauses, T, s, platform=platform, patch_dim=patch_dim,
                          boost_true_positive_feedback=boost_true_positive_feedback,
                          number_of_state_bits=number_of_state_bits, weighted_clauses=weighted_clauses,
@@ -684,7 +684,7 @@ class TMSSClassifier(TMClassifier):
     
     def __init__(self, number_of_clauses, T, s, platform='CPU', patch_dim=None, boost_true_positive_feedback=1,
                  number_of_state_bits=8, weighted_clauses=False, clause_drop_p=0.0, literal_drop_p=0.0,
-                 pattern_search_exit=0.8, epsilon = 0.5, reset_guess_threshold = 500):
+                 pattern_search_exit=1, epsilon = 0.8, reset_guess_threshold = 100):
         
         self.pattern_search_exit = pattern_search_exit
         self.epsilon = epsilon
@@ -694,7 +694,6 @@ class TMSSClassifier(TMClassifier):
         self.g_non = []
         self.grouped_samples = {}
         self.interpretability_clauses = {}
-        
         self.number_of_clauses = number_of_clauses
         self.T = T
         self.s = s
@@ -851,7 +850,7 @@ class TMSSClassifier(TMClassifier):
             dict_clause = self.convert_to_dict_clauses(logical_clause)
             final_B = list(self.remove_contradiction_0(dict_clause))
         
-        
+            
         return final_A, final_B
             
 
@@ -883,17 +882,19 @@ class TMSSClassifier(TMClassifier):
                         elif p[0] == '¬':
                             vote_B -= 1
 
+    
         if vote_A > vote_B:
             return 0
         elif vote_A < vote_B:
             return 1
         else:
             return 2
-
+         
     def reward(self, la_id, la, X_train, final_pattern_A, final_pattern_B):
         '''the reward function that evaluates accumulated patterns with regard to the LA decided label for each associated data sample. The function also updates the current learned two classes group 
         of data samples by updating the class members g_A, g_B, g_non where we use the information stored in them later. these grouping class attributes are being filled only with the current two classes being learned 
         and will not include all classes. For example if data has 20 classes.'''
+
         v = self.vote(final_pattern_A, final_pattern_B, X_train[la_id])
         s = ""
         sample_list = list(X_train[la_id])
@@ -904,16 +905,16 @@ class TMSSClassifier(TMClassifier):
             self.g_B.append(sample)
         else:
             self.g_non.append(sample)
-
+            
         if v == la.get_label():
             la.reward()
             return 1
-            
         else:
             if random.random() <= self.epsilon: # here we do not penalize all the LAS if they all were mistaken to avoid symetric error loops while labeling the data. It can be considered as sampling the labels.  
-                la.penalize()
+                la.penalize()      
                 return 0
-            return 1
+            else:
+                return 1
 
     def labels_feedback(self, las, X_train, final_pattern_A, final_pattern_B, pattern_search_exit):
         '''computes either penalized or rewarded associated LAs with data samples by calling the reward function above. The function uses a pattern_search_exit parameter to allow
@@ -1001,13 +1002,13 @@ class TMSSClassifier(TMClassifier):
         '''a function that initializes guess labels based on random selection of the associated LAs to data samnples'''
         las = []
         Y = np.zeros(samples_num)
-    
         for i in range(samples_num):
-            la = LA_2(100)
+            la = LA_2(100)            
             las.append(la)
             Y[i] = la.get_label()
+              
         print('----------------------------')
-        print('Labels Were Guessed By LAs.')
+        print('Labels Were Guessed By LAs.')            
         print('----------------------------')
 
         return las, Y
@@ -1024,6 +1025,7 @@ class TMSSClassifier(TMClassifier):
             if (cleaned_patterns[0][0] == '' and cleaned_patterns[1][1] == '') or (cleaned_patterns[1][0] == '' and cleaned_patterns[0][1] == ''):
                 print('NOT ENOUGH PATTERN DISCOVERED --> REPEATING INITIAL TRAINING')
                 las, Y = self.guess_labels(len(X))
+                self.initialize_coreTM(X, Y)
                 continue
             
             group1_final_pattern = cleaned_patterns[0][0].split(" ∧ ") + cleaned_patterns[1][1].split(
@@ -1072,7 +1074,7 @@ class TMSSClassifier(TMClassifier):
         for sample_string in self.g_A:
             if sample_string in self.g_B:
                 false_grouping += 1
-
+        
         print('Percentage of False Grouping: ', (false_grouping+len(self.g_non)) / data_size)
         print('Not Grouped Samples: ', len(self.g_non))
 
@@ -1092,22 +1094,28 @@ class TMSSClassifier(TMClassifier):
                     counter += 1
                     patterns_info.update({e:counter})
         
+        good_counter = 0 # for test purposes, will be deleted
         for k, v in patterns_info.items():
             print('Pattern ', k, ' Occurrence Percentage: ', round(v/len(clustered_samples), 4))
+            if round(v/len(clustered_samples), 4) == 1.0:
+                good_counter += 1
+        
+        if good_counter == 1:
+            return True
                 
     
     def fit(self, num_clauses, num_features, all_X):
         '''train the TMSSClassifier object. Perform the recursive grouping (breaking data into two classes recursivly)'''
-        
         for X in all_X:
             las, Y = self.guess_labels(len(X))
             self.initialize_coreTM(X, Y)
             final_pattern_A, final_pattern_B = [], []
             signal = 0
             counter = 0
+            grouping_states = [] # trace the percentage of wrong grouping. If stayed same for a couple of iterations, reset labelling guessing also
             while signal == 0:
                 try:
-                    print('Aquiring Pattern... Attempt #:', counter)
+                    print('Aquiring Pattern... Epoch #:', counter)
                     self.reset_grouping()
                     current_pattern_a, current_pattern_b, las = self.fetch_patterns(num_clauses, num_features, X, Y, las)
                     final_pattern_A, final_pattern_B = self.tune_information(final_pattern_A, final_pattern_B, current_pattern_a, current_pattern_b)
@@ -1115,6 +1123,7 @@ class TMSSClassifier(TMClassifier):
                     counter += 1
                     if counter > self.reset_guess_threshold:
                         las, Y = self.guess_labels(len(X))
+                        self.initialize_coreTM(X, Y)
                         counter = 0
 
                 except Exception as e:
@@ -1139,6 +1148,7 @@ class TMSSClassifier(TMClassifier):
                     self.grouped_samples.update({random_key: x2})
                 else:
                     self.grouped_samples.update({random_key: x1})
+
                 print('------------------------------------')
                 print('Sub Patterns Found So Far:', len(self.grouped_samples))
                 print('------------------------------------')
