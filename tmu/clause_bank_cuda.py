@@ -106,17 +106,19 @@ class ClauseBankCUDA():
         lib.cb_calculate_clause_outputs_patchwise(self.cb_p, self.number_of_clauses, self.number_of_literals, self.number_of_state_bits, self.number_of_patches, self.cop_p, xi_p)
         return self.clause_output_patchwise
 
-    def type_i_feedback(self, update_p, s, boost_true_positive_feedback, clause_active, encoded_X, e):
-        cuda.memcpy_htod(self.clause_active_gpu, clause_active)
-        self.type_i_feedback_gpu.prepared_call(self.grid, self.block, g.state, self.clause_bank_gpu, self.number_of_clauses, self.number_of_literals, self.number_of_state_bits, update_p, s, boost_true_positive_feedback, self.clause_active_gpu, encoded_X, np.int32(e))
-        cuda.Context.synchronize()
-        self.clause_bank_synchronized = False
+    def type_i_feedback(self, update_p, s, boost_true_positive_feedback, clause_active, encoded_X, e, augments=1):
+        for _ in range(augments):
+            cuda.memcpy_htod(self.clause_active_gpu, clause_active)
+            self.type_i_feedback_gpu.prepared_call(self.grid, self.block, g.state, self.clause_bank_gpu, self.number_of_clauses, self.number_of_literals, self.number_of_state_bits, update_p, s, boost_true_positive_feedback, self.clause_active_gpu, encoded_X, np.int32(e))
+            cuda.Context.synchronize()
+            self.clause_bank_synchronized = False
     
-    def type_ii_feedback(self, update_p, clause_active, encoded_X, e):
-        cuda.memcpy_htod(self.clause_active_gpu, np.ascontiguousarray(clause_active))
-        self.type_ii_feedback_gpu.prepared_call(self.grid, self.block, g.state, self.clause_bank_gpu, self.number_of_clauses, self.number_of_literals, self.number_of_state_bits, update_p, self.clause_active_gpu, encoded_X, np.int32(e))
-        cuda.Context.synchronize()
-        self.clause_bank_synchronized = False
+    def type_ii_feedback(self, update_p, clause_active, encoded_X, e, augments=1):
+        for _ in range(augments):
+            cuda.memcpy_htod(self.clause_active_gpu, np.ascontiguousarray(clause_active))
+            self.type_ii_feedback_gpu.prepared_call(self.grid, self.block, g.state, self.clause_bank_gpu, self.number_of_clauses, self.number_of_literals, self.number_of_state_bits, update_p, self.clause_active_gpu, encoded_X, np.int32(e))
+            cuda.Context.synchronize()
+            self.clause_bank_synchronized = False
 
     def get_ta_action(self, clause, ta):
         self.synchronize_clause_bank()
