@@ -3,7 +3,7 @@ Implements the Self-Supervised Tsetlin Machine to learn classification tasks wit
 
 ## Architecture
 
-![alt text](https://github.com/[ahmed-abouzeid]/[Label-Critic]/[main]/arch.jpg?raw=true)
+![alt text](https://github.com/[ahmed-abouzeid]/[Label-Critic]/[main]/0001.jpg?raw=true)
 
 
 ## To reproduce the guess game expirements on synthetic data, from examples, run:
