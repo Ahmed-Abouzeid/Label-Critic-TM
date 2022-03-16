@@ -17,7 +17,7 @@ python mnist_lctm_augmented.py
 
 python mnist_lctm.py
 
-## For cluster interpretability, from examplesm run:
+## For cluster interpretability, from examples, run:
 
 python mnist_interpret_clusters.py
 
