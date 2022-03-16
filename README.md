@@ -1,2 +1,2 @@
-# Tsetlin Machine Unified - One Codebase to Rule Them All
+# Label-Critic TM for Self SUpervised Learning
 Implements the Self-Supervised Tsetlin Machine to learn classification tasks without ground truthes. The repository also include the classic Tsetlin Machine, Coalesced Tsetlin Machine, Convolutional Tsetlin Machine, Regression Tsetlin Machine, and Weighted Tsetlin Machine, with support for continuous features and drop clause. Self-Supervised-TM is written in Python with wrappers for C and CUDA-based clause evaluation and updating.
